@@ -2,7 +2,7 @@
 
 Solução do desafio técnico de Cientista de Dados do **Registro Municipal Integrado (RMI)**: um projeto `dbt-core` + `dbt-bigquery` que transforma dados educacionais anonimizados em camadas analíticas confiáveis (staging, intermediate, marts), com estratégia de testes focada em qualidade e documentação de ponta a ponta.
 
-A premissa que guiou todo o projeto: **profundidade sobre completude**. Em vez de empilhar models rasos, priorizei poucos models corretos, com testes intencionais e achados de qualidade documentados.
+O que puxou as decisões aqui não foi a quantidade de models, e sim entender os dados antes de modelá-los. Cada escolha de modelagem partiu de algo concreto que apareceu na exploração (um tipo estranho de ID, uma coluna de frequência sem variância, chaves que não casam entre tabelas), e os testes existem justamente para proteger esses pontos.
 
 ---
 
@@ -105,10 +105,11 @@ Volumetria: `aluno` 97.044, `escola` 1.558, `matriculas` 97.044 (17.311 turmas),
 
 ## Decisões de arquitetura
 
-**Materializações por camada**
-- `staging` como **view**: barato, sempre reflete a fonte, serve de contrato de limpeza. Volume não justifica materializar em tabela.
-- `intermediate` como **ephemeral**: lógica de negócio reutilizável embutida como CTE nos marts, sem poluir o warehouse com objetos intermediários.
-- `marts` como **table**: consumo analítico rápido e estável para dashboards. `mart_educacao__absenteismo_regiao` usa `cluster_by = bairro_id` para filtros por região.
+**Materializações por camada.** Cada camada tem um papel diferente, então materializei cada uma de um jeito:
+
+- O `staging` ficou como **view**. Ele apenas limpa e padroniza a fonte, não compensa guardar isso em disco, e a view sempre reflete o dado mais atual. Na prática, funciona como um contrato de limpeza.
+- O `intermediate` ficou como **ephemeral**: a lógica de negócio é reaproveitada dentro dos marts na forma de CTE, sem criar tabelas intermediárias que ninguém consulta direto e que só ocupariam espaço no warehouse.
+- Os `marts` são **table**, porque é o que o BI vai consultar com frequência, então precisa ser rápido e estável. O `mart_educacao__absenteismo_regiao` ainda usa `cluster_by = bairro_id`, já que o filtro mais comum ali é por região.
 
 **Chave de join canônica.** `id_aluno` concilia 100% entre todas as tabelas, enquanto `id_turma` da frequência não. Por isso toda consolidação de fato (frequência, desempenho) é feita por `id_aluno`, e a escola do aluno é atribuída pela **escola predominante** (maior contagem de registros de frequência), não pela turma.
 
@@ -122,19 +123,24 @@ Volumetria: `aluno` 97.044, `escola` 1.558, `matriculas` 97.044 (17.311 turmas),
 
 ## Estratégia de testes
 
-A cobertura é **intencional**: cada teste responde a uma pergunta de confiabilidade, não é aplicado mecanicamente.
+Priorizei testar o que, se estivesse errado, derrubaria alguma conclusão: as chaves de grão, as relações que sustentam os joins e os domínios fechados. Onde um problema já é conhecido e tolerável (os órfãos de turma e os nulos de bairro), usei `severity: warn` para acompanhar sem travar o build.
 
 **Testes genéricos (schema.yml)**
-- `unique` + `not_null` nas chaves de grão (`aluno_id` em alunos/matrículas, `escola_id`, `turma_id`/`escola_id` nos marts): garantem o grão declarado de cada model.
-- `relationships`: integridade referencial nas chaves confiáveis (frequência/avaliação → aluno; frequência → escola). A relação frequência → matrícula via `turma_id` é mantida como **`severity: warn`**, de propósito, porque o ~12% de órfãos é um achado conhecido que não deve quebrar o pipeline.
-- `accepted_values`: travam domínios fechados (faixa etária, bimestre 1 a 4, disciplinas, ano letivo 2000, faixas de tamanho de turma).
-- `dbt_utils.accepted_range`: percentual de frequência em 0 a 100, notas em 0 a 10, taxas em 0 a 1.
-- `dbt_utils.unique_combination_of_columns`: grão composto de avaliações e desempenho.
 
-**Teste genérico customizado**
-- `proporcao_nulos_abaixo_de` (em `macros/generic_tests/`): tolera uma fração conhecida de nulos e só avisa quando a qualidade degrada. Diferente de `not_null`, permite monitorar o `bairro_id` do aluno sem travar o build.
+| Teste | Aplicado em | O que protege |
+|-------|-------------|---------------|
+| `unique` + `not_null` | `aluno_id` (alunos/matrículas), `escola_id`, `turma_id`/`escola_id` (marts) | garante o grão declarado de cada model |
+| `relationships` | frequência/avaliação → aluno; frequência → escola | integridade referencial nas chaves confiáveis |
+| `relationships` (`severity: warn`) | frequência → matrícula via `turma_id` | monitora os ~12% de órfãos sem quebrar o pipeline |
+| `accepted_values` | faixa etária, bimestre (1 a 4), disciplinas, ano letivo (2000), faixa de tamanho de turma | trava domínios fechados |
+| `dbt_utils.accepted_range` | frequência (0 a 100), notas (0 a 10), taxas (0 a 1) | faixas numéricas válidas |
+| `dbt_utils.unique_combination_of_columns` | avaliações e desempenho | unicidade do grão composto |
+| `proporcao_nulos_abaixo_de` (customizado) | `bairro_id` do aluno | tolera uma fração conhecida de nulos e só avisa quando a qualidade degrada |
+
+O teste customizado vive em `macros/generic_tests/`. Diferente de um `not_null`, ele permite monitorar o `bairro_id` (que tem ~0,07% de nulos) sem travar o build enquanto o problema estiver dentro do limite.
 
 **Testes singular de regra de negócio (`tests/`)**
+
 1. `assert_periodo_frequencia_coerente`: nenhum registro pode ter `data_inicio > data_fim`. Datas incoerentes invalidariam qualquer cálculo temporal.
 2. `assert_aluno_frequencia_sem_duplicatas`: após a dedup, o grão da frequência precisa ser único, pré-condição para agregações corretas nos marts.
 3. `assert_todo_aluno_com_nota_tem_matricula`: nenhum aluno pode ter nota sem matrícula correspondente, o que indicaria lançamento indevido ou falha de integração entre sistemas.
@@ -143,7 +149,7 @@ A cobertura é **intencional**: cada teste responde a uma pergunta de confiabili
 
 ## Análise dos resultados
 
-**Absenteísmo por região.** A pergunta dos gestores é quais regiões concentram alunos com frequência abaixo de 75%. O caminho óbvio seria a tabela `frequencia`, mas, ao explorar os dados, descobri que ela não tem variância (fica entre 97% e 100%, o que daria taxa zero em toda a rede). A frequência com sinal está em outro campo: `avaliacao.frequencia`, a frequência geral por bimestre, que varia de 0 a 100% (média 89%). Construí o mart sobre essa fonte, mantendo a frequência da tabela `frequencia` como contraste. O resultado passa a ser acionável: cerca de **10,4% dos alunos** têm frequência média abaixo de 75%, e a taxa varia de **0% a 33% entre as escolas** (478 escolas com 20 ou mais alunos, média de 10,5%). Essa escolha de fonte, e o motivo de descartar a tabela `frequencia`, é parte central do raciocínio analítico documentado. O dicionário oficial da fonte (`rmi/schema.yml`) confirma posteriormente que `avaliacao.frequencia` é o campo *original* de frequência, enquanto a tabela `frequencia` traz um valor derivado (`100 - faltas_disciplina / dias_letivos`), o que reforça a escolha.
+**Absenteísmo por região.** A pergunta dos gestores é quais regiões concentram alunos com frequência abaixo de 75%. O caminho óbvio seria a tabela `frequencia`, mas, ao explorar os dados, descobri que ela não tem variância (fica entre 97% e 100%, o que daria taxa zero em toda a rede). A frequência com sinal está em outro campo: `avaliacao.frequencia`, a frequência geral por bimestre, que varia de 0 a 100% (média 89%). Construí o mart sobre essa fonte, mantendo a frequência da tabela `frequencia` como contraste. Com isso os números finalmente mostram diferença entre as escolas: cerca de **10,4% dos alunos** têm frequência média abaixo de 75%, e a taxa vai de **0% a 33% entre as escolas** (478 escolas com 20 ou mais alunos, média de 10,5%). Essa escolha de fonte, e o motivo de descartar a tabela `frequencia`, é parte central do raciocínio analítico documentado. O dicionário oficial da fonte (`rmi/schema.yml`) confirma posteriormente que `avaliacao.frequencia` é o campo *original* de frequência, enquanto a tabela `frequencia` traz um valor derivado (`100 - faltas_disciplina / dias_letivos`), o que reforça a escolha.
 
 **Desempenho por tamanho de turma.** Como `série` e `turno` não existem nos dados, adaptei a pergunta sugerida para a dimensão que é derivável: o **tamanho da turma** (contagem de matrículas). O mart cruza o tamanho com a média de notas e a taxa de aprovação, permitindo investigar se turmas maiores se associam a desempenho diferente. A correlação observada é positiva (Pearson de 0,44), mas, por ser dado aleatorizado, foi documentada como provável artefato (turmas minúsculas têm poucas notas e mais ruído), não como relação causal.
 
@@ -245,11 +251,13 @@ desafio-rmi-ds/
 ## Trade-offs e próximos passos
 
 **Trade-offs assumidos**
+
 - `intermediate` como ephemeral favorece um warehouse limpo, ao custo de não poder inspecionar a tabela intermediária isoladamente. Dado o volume atual, compensa.
 - A escola do aluno foi resolvida por "escola predominante". É uma heurística; o ideal seria uma regra de negócio oficial de vínculo aluno-escola, que os dados não fornecem.
 - Mantive a relação frequência → matrícula como `warn` em vez de remover as linhas órfãs: prefiro tornar o problema visível a mascará-lo silenciosamente.
 
 **O que eu faria com mais tempo**
+
 - Materializar `frequencia` como **incremental** particionada por mês, já que é a maior tabela (2,7M linhas) e cresceria em produção.
 - Adicionar **data contracts** (`contract: enforced`) nos marts para travar schema e tipos.
 - Snapshots (SCD2) para dimensões que mudam (aluno muda de turma/escola ao longo do ano).
