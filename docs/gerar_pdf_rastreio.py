@@ -352,7 +352,7 @@ E.append(tabela([
     ["Item pedido", "Status", "Onde / observação"],
     ["Testes genéricos (unique, not_null, accepted_values, relationships)", "OK", "Nos schema.yml de staging, intermediate e marts"],
     [">=2 testes singular / customizados de regra de negócio", "OK", "3 testes em tests/ + 1 teste genérico customizado"],
-    ["dbt test passando", "OK", "PASS=62, WARN=1 (órfãos de turma, planejado), ERROR=0"],
+    ["dbt test passando", "OK", "PASS=56, WARN=1 (órfãos de turma, planejado), ERROR=0 (57 testes)"],
 ], [7.6 * cm, 2.0 * cm, 6.9 * cm], status_col=1))
 E.append(H2("Parte 3: Documentação e Análise"))
 E.append(tabela([
@@ -363,7 +363,7 @@ E.append(tabela([
 E.append(H2("Diferenciais sugeridos"))
 E.append(tabela([
     ["Diferencial", "Status", "Observação"],
-    ["dbt packages", "PARCIAL", "dbt_utils usado; dbt_expectations e codegen declarados mas não usados em testes"],
+    ["dbt packages", "OK", "dbt_utils e dbt_expectations usados em testes; codegen para scaffolding"],
     ["freshness nas sources", "OK", "Configurado (baseado em metadados)"],
     ["tags", "OK", "Tags por camada no dbt_project.yml"],
     ["exposures", "OK", "Exposure do painel de gestão"],
@@ -633,7 +633,10 @@ E.append(tabela([
     ["assert_todo_aluno_com_nota_tem_matricula", "Nota exige matrícula correspondente", "Nenhuma linha retornada"],
 ], [6.4 * cm, 6.6 * cm, 3.5 * cm]))
 E.append(P("Além desses, os `schema.yml` trazem dezenas de testes genéricos (unique, not_null, "
-           "accepted_values, relationships, accepted_range, unique_combination_of_columns)."))
+           "accepted_values, relationships, accepted_range, unique_combination_of_columns), "
+           "incluindo dois testes do dbt_expectations na avaliação: a média da nota deve ficar "
+           "entre 5 e 7 (distribuição) e o bimestre deve ter exatamente 4 valores distintos "
+           "(cardinalidade)."))
 E.append(H2("CI e scripts"))
 E.append(tabela([
     ["Arquivo", "Papel"],
@@ -702,7 +705,7 @@ E.extend(BU([
     "Snapshots (SCD2) para histórico de aluno mudando de turma/escola.",
     "Data contracts (contract: enforced) nos marts.",
     "Hooks (pre/post-hook).",
-    "Testes do dbt_expectations e uso do codegen (pacotes declarados, não explorados em testes).",
+    "Uso mais amplo do codegen (pacote declarado, usado só para scaffolding).",
     "Cruzamento com a tabela pública de bairros (datario): os bairros estão em hash, não conciliam.",
 ]))
 E.append(H2("Ressalvas de interpretação"))

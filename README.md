@@ -119,6 +119,8 @@ Volumetria: `aluno` 97.044, `escola` 1.558, `matriculas` 97.044 (17.311 turmas),
 
 **Seed + macro para disciplinas.** O de/para `disciplina_1 → Português` existe como macro (`nome_disciplina`, aplicada no SQL, DRY) e como seed (`seed_educacao__disciplinas`, para documentação e eventuais `relationships`).
 
+**Bairros anonimizados, sem cruzamento com a base pública.** O enunciado disponibiliza a tabela `datario.dados_mestres.bairro` com o cadastro oficial de bairros do Rio. Optei por não cruzá-la: o bairro de alunos e escolas chega como hash anonimizado (`bairro_id`), que não concilia com os códigos reais da base pública, então o join só produziria correspondências falsas. As agregações por região usam o próprio `bairro_id` como chave estável, e o cruzamento com o cadastro oficial fica como passo natural quando os dados forem desanonimizados em produção.
+
 ---
 
 ## Estratégia de testes

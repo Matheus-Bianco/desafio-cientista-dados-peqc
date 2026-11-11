@@ -146,6 +146,11 @@ models:
           - accepted_values:
               values: [1, 2, 3, 4]
               quote: false
+          # dbt_expectations: cardinalidade esperada da dimensao temporal.
+          # O ano letivo tem exatamente 4 bimestres; qualquer valor a mais
+          # ou a menos indica problema na carga da fonte.
+          - dbt_expectations.expect_column_distinct_count_to_equal:
+              value: 4
       - name: disciplina
         description: "Disciplina (nome legivel)."
         tests:
@@ -161,6 +166,13 @@ models:
               min_value: "{{ var('nota_minima') }}"
               max_value: "{{ var('nota_maxima') }}"
               where: "nota is not null"
+          # dbt_expectations: monitora a DISTRIBUICAO das notas, nao so o range.
+          # A media observada nos dados e ~6,16 (min 0, max 10, desvio ~2,1);
+          # se escapar de 5 a 7 e sinal de que a distribuicao da fonte mudou.
+          - dbt_expectations.expect_column_mean_to_be_between:
+              min_value: 5
+              max_value: 7
+              row_condition: "nota is not null"
     # Teste de grao composto (combinacao unica) usando dbt_utils.
     tests:
       - dbt_utils.unique_combination_of_columns:

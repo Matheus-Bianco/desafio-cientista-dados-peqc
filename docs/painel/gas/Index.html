@@ -191,14 +191,14 @@
 
 <script>
 const DADOS = {
-  kpis: {alunos:96197, escolas:478, turmas:3993, absenteismo:10.4, media_geral:4.74, aprovacao:34.2, freq_aval:87.3, freq_tab:99.9},
+  kpis: {alunos:96197, escolas:478, turmas:3993, absenteismo:10.4, media_geral:5.87, aprovacao:51.5, freq_aval:87.3, freq_tab:99.9},
   freq: [{fonte:'Tabela frequência\n(por período)', valor:99.9, sinal:false},
          {fonte:'Frequência da avaliação\n(por bimestre)', valor:87.3, sinal:true}],
   faixa: [{f:'< 5%',n:31,c:'#2e7d32'},{f:'5% a 10%',n:157,c:'#66bb6a'},{f:'10% a 15%',n:251,c:'#f9a825'},
           {f:'15% a 20%',n:32,c:'#e65100'},{f:'20% ou mais',n:7,c:'#c62828'}],
   turma: [{f:'Até 5',media:4.11,aprov:24.3},{f:'6 a 10',media:3.61,aprov:19.4},{f:'11 a 20',media:3.96,aprov:24.7},
           {f:'21 a 30',media:5.55,aprov:43.8},{f:'Mais de 30',media:6.14,aprov:55.9}],
-  disc: [{d:'Português',m:4.89},{d:'Ciências',m:4.82},{d:'Matemática',m:4.62}],
+  disc: [{d:'Português',m:6.13},{d:'Ciências',m:5.95},{d:'Matemática',m:5.59}],
   top: [
     {e:'ESC-8400858',b:'B-240732',al:31,abs:8,taxa:33.3,freq:81.4},
     {e:'ESC-8350866',b:'B-594257',al:45,abs:7,taxa:23.3,freq:84.4},
@@ -285,7 +285,7 @@ new Chart(cDisc,{type:'bar',
       backgroundColor:[PRI,PRI_L,'#60a5fa'],borderRadius:6,maxBarThickness:46}]},
   options:{indexAxis:'y',plugins:{legend:{display:false},datalabels:{anchor:'end',align:'end',offset:4,
       color:'#1a2332',font:{weight:'700',size:12},formatter:v=>v.toLocaleString('pt-BR')}},
-    scales:{x:{beginAtZero:true,max:6,grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}});
+    scales:{x:{beginAtZero:true,max:7,grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}});
 
 /* Tabela top 10 */
 function pill(t){let c=t>=20?'#c62828':t>=15?'#e65100':'#f9a825';
