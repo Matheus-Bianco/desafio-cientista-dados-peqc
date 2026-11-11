@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: mart_educacao__absenteismo_regiao
+    description: >
+      Taxa de absenteismo cronico (frequencia media bimestral < 75%) por escola
+      e regiao (bairro). Materializado como table. Grao: 1 linha por escola.
+      Usa avaliacao.frequencia (fonte com variancia); resultado real de ~10%
+      de absenteismo, variando por escola. Ver README (secao Analise).
+    columns:
+      - name: escola_id
+        description: "Escola (grao do mart)."
+        tests:
+          - unique
+          - not_null
+      - name: bairro_id
+        description: "Bairro da escola."
+      - name: n_alunos
+        description: "Alunos atribuidos a escola (pela escola predominante)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: taxa_absenteismo_cronico
+        description: "Proporcao de alunos com absenteismo cronico (0 a 1)."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              where: "taxa_absenteismo_cronico is not null"
+      - name: media_frequencia_regiao
+        description: "Frequencia media bimestral dos alunos da escola (fonte com variancia)."
+      - name: media_frequencia_registros_regiao
+        description: "Contraste: frequencia media pela tabela `frequencia` (sem variancia)."
+
+  - name: mart_educacao__desempenho_por_turma
+    description: >
+      Desempenho academico medio por turma, cruzado com o tamanho da turma.
+      Permite analisar a relacao tamanho x desempenho. Grao: 1 linha por turma.
+    columns:
+      - name: turma_id
+        description: "Turma (grao do mart)."
+        tests:
+          - unique
+          - not_null
+      - name: n_alunos_matriculados
+        description: "Tamanho da turma (alunos matriculados)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: faixa_tamanho_turma
+        description: "Faixa categorizada de tamanho da turma."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - '01. Ate 5 alunos'
+                - '02. 6 a 10 alunos'
+                - '03. 11 a 20 alunos'
+                - '04. 21 a 30 alunos'
+                - '05. Mais de 30 alunos'
+      - name: media_geral_turma
+        description: "Media geral das notas da turma (0-10)."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10
+              where: "media_geral_turma is not null"
+      - name: taxa_aprovacao_media
+        description: "Proporcao de alunos aprovados por media (>= 6) na turma."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              where: "taxa_aprovacao_media is not null"

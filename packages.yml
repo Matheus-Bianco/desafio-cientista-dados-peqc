@@ -1,0 +1,10 @@
+packages:
+  # Testes e helpers genericos (accepted_range, equal_rowcount, etc.)
+  - package: dbt-labs/dbt_utils
+    version: [">=1.1.0", "<2.0.0"]
+  # Testes estilo Great Expectations (distribuicao, tipos, valores)
+  - package: calogica/dbt_expectations
+    version: [">=0.10.0", "<0.11.0"]
+  # Geracao de boilerplate (sources, staging, schema.yml)
+  - package: dbt-labs/codegen
+    version: [">=0.12.0", "<0.13.0"]

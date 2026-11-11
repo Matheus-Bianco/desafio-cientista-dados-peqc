@@ -1,0 +1,51 @@
+name: 'desafio_rmi'
+version: '1.0.0'
+config-version: 2
+
+# Profile definido em ~/.dbt/profiles.yml (ver profiles.yml.example)
+profile: 'desafio_rmi'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Variaveis de negocio centralizadas (evita "numeros magicos" espalhados no SQL)
+vars:
+  # Limiar de frequencia minima adequada (politica educacional: 75%)
+  limite_frequencia_adequada: 75
+  # Nota minima e maxima do sistema de avaliacao
+  nota_minima: 0
+  nota_maxima: 10
+
+models:
+  desafio_rmi:
+    # Convencao de materializacao por camada:
+    # - staging:      view        (leve, sempre reflete a fonte, barato)
+    # - intermediate: ephemeral   (CTE embutida, nao polui o warehouse)
+    # - marts:        table       (consumo analitico rapido e estavel)
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ['staging']
+    intermediate:
+      +materialized: ephemeral
+      +tags: ['intermediate']
+    marts:
+      +materialized: table
+      +schema: marts
+      +tags: ['marts']
+
+seeds:
+  desafio_rmi:
+    +schema: seeds
+    seed_educacao__disciplinas:
+      +column_types:
+        disciplina_codigo: STRING
+        disciplina_nome: STRING

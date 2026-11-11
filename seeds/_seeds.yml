@@ -1,0 +1,18 @@
+version: 2
+
+seeds:
+  - name: seed_educacao__disciplinas
+    description: >
+      Mapeamento (de/para) entre o codigo generico de disciplina usado na
+      anonimizacao (disciplina_1..4) e o nome legivel da disciplina.
+      Fonte: documentacao do proprio desafio (schema.yml do bucket).
+    columns:
+      - name: disciplina_codigo
+        description: "Codigo generico da disciplina (disciplina_1..disciplina_4)."
+        tests:
+          - unique
+          - not_null
+      - name: disciplina_nome
+        description: "Nome legivel da disciplina (Português, Ciências, Inglês, Matemática)."
+        tests:
+          - not_null

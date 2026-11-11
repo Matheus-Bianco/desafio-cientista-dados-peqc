@@ -1,0 +1,29 @@
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Credenciais - NUNCA commitar
+keyfile.json
+*.key.json
+.env
+
+# Dados brutos (baixados do GCS) - nao versionar
+data/
+*.parquet
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# SO
+.DS_Store
+Thumbs.db
+
+# clasp (ID do projeto Apps Script, especifico da conta)
+**/.clasp.json
+.clasprc.json

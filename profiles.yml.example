@@ -1,0 +1,37 @@
+# Copie este arquivo para ~/.dbt/profiles.yml e ajuste os valores.
+# Duas opcoes de autenticacao estao documentadas abaixo.
+
+desafio_rmi:
+  target: dev
+  outputs:
+
+    # ---------------------------------------------------------------
+    # DEV: autenticacao via gcloud (oauth) - recomendado para uso local
+    #   Requer:  gcloud auth application-default login
+    # ---------------------------------------------------------------
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT') }}"   # ex: meu-projeto-sandbox
+      dataset: rmi_dev                           # dataset onde o dbt cria os models
+      location: US                               # mesma location do dataset raw
+      threads: 4
+      priority: interactive
+      job_execution_timeout_seconds: 600
+      job_retries: 1
+
+    # ---------------------------------------------------------------
+    # CI / PROD: autenticacao via service account (keyfile JSON)
+    #   Usado pelo GitHub Actions (secret GCP_SA_KEY gravado em keyfile.json)
+    # ---------------------------------------------------------------
+    ci:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: rmi_ci
+      location: US
+      threads: 8
+      priority: interactive
+      job_execution_timeout_seconds: 600
+      job_retries: 1

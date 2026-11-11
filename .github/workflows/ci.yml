@@ -1,0 +1,56 @@
+name: dbt CI
+
+# Executa `dbt build` (run + test + seed + snapshot) a cada PR e push na main.
+# Garante que nenhuma alteracao quebre models ou testes antes do merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desafio-rmi-ds
+
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/desafio-rmi-ds/ci
+      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/desafio-rmi-ds/keyfile.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Gravar service account key
+        run: echo '${{ secrets.GCP_SA_KEY }}' > keyfile.json
+
+      - name: Preparar profiles.yml (target ci)
+        run: |
+          mkdir -p ci
+          cp profiles.yml.example ci/profiles.yml
+
+      - name: dbt deps
+        run: dbt deps
+
+      - name: dbt build (seed + run + test)
+        run: dbt build --target ci --fail-fast
+
+      - name: dbt source freshness
+        run: dbt source freshness --target ci
+        continue-on-error: true   # freshness informativa; nao bloqueia o merge
+
+      - name: Limpar credenciais
+        if: always()
+        run: rm -f keyfile.json

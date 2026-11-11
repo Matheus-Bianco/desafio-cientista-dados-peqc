@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: int_educacao__aluno_frequencia
+    description: >
+      Metricas de presenca consolidadas por aluno. A frequencia COM SINAL vem
+      de avaliacao.frequencia (geral por bimestre, 0-100); a tabela `frequencia`
+      por periodo (97-100, sem variancia) entra apenas como contraste. Join por
+      aluno_id (chave confiavel); escola atribuida pela escola predominante.
+      Materializado como ephemeral (CTE reutilizada pelos marts).
+      Premissas e decisoes documentadas no README (secoes Achados e Analise).
+    columns:
+      - name: aluno_id
+        description: "Aluno (grao da tabela)."
+        tests:
+          - unique
+          - not_null
+      - name: media_frequencia
+        description: >
+          Frequencia media bimestral do aluno (fonte avaliacao.frequencia, 0-100;
+          a fonte com variancia). Nula se o aluno nao possui avaliacao.
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              where: "media_frequencia is not null"
+      - name: media_frequencia_registros
+        description: >
+          Frequencia media pela tabela `frequencia` (0-100; sem variancia,
+          ~100%). Mantida apenas como contraste/transparencia, nao usada no flag.
+      - name: flag_absenteismo_cronico
+        description: "True se media_frequencia (bimestral) < limite de politica (75%)."
+
+  - name: int_educacao__aluno_desempenho
+    description: >
+      Desempenho academico consolidado por aluno/turma, com medias por
+      disciplina. Base para o mart de desempenho por perfil de turma.
+    columns:
+      - name: aluno_id
+        description: "Aluno."
+        tests:
+          - not_null
+      - name: media_geral
+        description: "Media geral do aluno (0-10)."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10
+              where: "media_geral is not null"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [aluno_id, turma_id]

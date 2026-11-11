@@ -1,0 +1,19 @@
+version: 2
+
+exposures:
+  - name: painel_gestao_educacional
+    label: "Painel de Gestao Educacional (RMI)"
+    type: dashboard
+    maturity: low
+    description: >
+      Painel executivo (hipotetico) consumido pela Secretaria Municipal de
+      Educacao para monitorar absenteismo por regiao e desempenho por perfil
+      de turma. Serve para rastrear o impacto (downstream) dos marts: qualquer
+      quebra nos testes destes marts afeta diretamente a tomada de decisao.
+    url: https://example.com/painel-rmi
+    owner:
+      name: Matheus Bianco
+      email: equipe-dados@example.com
+    depends_on:
+      - ref('mart_educacao__absenteismo_regiao')
+      - ref('mart_educacao__desempenho_por_turma')

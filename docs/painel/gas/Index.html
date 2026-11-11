@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Gestão Educacional — RMI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --pri:#1e3a8a; --pri-l:#2563eb; --pri-ll:#60a5fa; --accent:#0097A7;
+    --green:#2e7d32; --green-l:#66bb6a; --orange:#e65100; --red:#c62828; --gold:#D4A84B;
+    --bg:#f4f6f9; --card:#fff; --text:#1a2332; --text2:#5a6a7a; --text3:#8a9bae;
+    --border:rgba(0,0,0,.08); --border2:rgba(0,0,0,.12);
+    --shadow:0 2px 12px rgba(0,0,0,.06); --shadow-lg:0 8px 32px rgba(0,0,0,.10); --R:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;padding-bottom:28px}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+
+  /* Header */
+  header{background:linear-gradient(135deg,var(--pri) 0%,var(--pri-l) 60%,var(--accent) 140%);
+    color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow-lg)}
+  header::after{content:"";position:absolute;inset:0;opacity:.10;
+    background-image:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='none' stroke='white' stroke-width='1'/%3E%3C/svg%3E")}
+  .head-in{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;max-width:1200px;margin:0 auto;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:.2px}
+  .brand p{font-size:11.5px;font-weight:400;opacity:.85;margin-top:1px}
+  .selo{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .selo span{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);
+    backdrop-filter:blur(8px);padding:6px 11px;border-radius:9px;font-size:11px;font-weight:600}
+
+  /* Hero */
+  .hero{background:linear-gradient(120deg,#e3f0fc,#dceefb 45%,#e8f5fd);
+    border-bottom:1px solid var(--border)}
+  .hero-in{max-width:1200px;margin:0 auto;padding:16px 20px;display:flex;
+    justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .hero h2{font-size:21px;font-weight:700;color:var(--pri)}
+  .hero p{font-size:13px;color:var(--text2);margin-top:3px;max-width:720px}
+  .hero .ano{font-size:12px;color:var(--text3);font-weight:600}
+
+  section{margin-top:22px}
+  .sec-title{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+  .sec-title .bar{width:4px;height:17px;border-radius:3px;background:var(--pri)}
+  .sec-title h3{font-size:13px;font-weight:700;color:var(--pri);text-transform:uppercase;letter-spacing:1.1px}
+
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .kpi{position:relative;background:linear-gradient(135deg,#fff 0%,var(--kpi-bg,#f6f9ff) 100%);
+    border-radius:var(--R);box-shadow:var(--shadow);border:1px solid var(--border);
+    padding:16px 16px 14px;overflow:hidden;border-left:4px solid var(--kpi,#1e3a8a);
+    opacity:0;transform:translateY(14px);animation:fadeUp .5s forwards}
+  .kpi::after{content:"";position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;
+    background:radial-gradient(circle,var(--kpi,#1e3a8a) 0%,transparent 70%);opacity:.07}
+  .kpi-top{display:flex;align-items:center;justify-content:space-between}
+  .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text3)}
+  .kpi-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    background:var(--kpi-bg,#eef4ff)}
+  .kpi-ic svg{width:17px;height:17px}
+  .kpi-val{font-size:28px;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums;color:var(--text)}
+  .kpi-sub{font-size:11.5px;color:var(--text2);margin-top:5px;border-top:1px solid rgba(0,0,0,.05);padding-top:6px}
+
+  /* Charts grid */
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .panel{background:var(--card);border-radius:var(--R);box-shadow:var(--shadow);
+    border:1px solid var(--border);padding:16px 18px 14px;
+    opacity:0;transform:translateY(14px);animation:fadeUp .55s forwards}
+  .panel h4{font-size:13.5px;font-weight:700;color:var(--pri);text-align:center}
+  .panel .cap{font-size:11px;color:var(--text3);text-align:center;margin-top:2px;margin-bottom:8px}
+  .chart-box{position:relative;height:230px}
+  .chart-box.tall{height:250px}
+
+  /* Insight callout */
+  .insight{background:linear-gradient(120deg,#fff8e1,#fffdf5);border:1px solid #f3e2a8;
+    border-left:4px solid var(--gold);border-radius:var(--R);padding:13px 16px;margin-top:16px}
+  .insight b{color:#8a6d1a}
+  .insight p{font-size:12.5px;color:var(--text2);line-height:1.55}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  thead th{background:#f8f9fb;color:var(--pri);text-transform:uppercase;font-size:10.5px;
+    letter-spacing:.5px;font-weight:700;text-align:left;padding:9px 10px;border-bottom:2px solid var(--pri-ll)}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--border)}
+  tbody tr:hover{background:rgba(30,58,138,.035)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+
+  footer{margin-top:22px;text-align:center;font-size:11px;color:var(--text3);line-height:1.6}
+
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+  .d1{animation-delay:.05s}.d2{animation-delay:.12s}.d3{animation-delay:.19s}.d4{animation-delay:.26s}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div class="brand">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+          <path d="M3 10l9-5 9 5-9 5-9-5z"/><path d="M7 12v4c0 1 2 2 5 2s5-1 5-2v-4"/><path d="M21 10v5"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Painel de Gestão Educacional — RMI</h1>
+        <p>Frequência, absenteísmo e desempenho da rede municipal</p>
+      </div>
+    </div>
+    <div class="selo">
+      <span>Modelado em dbt</span><span>BigQuery</span><span>Dados anonimizados</span>
+    </div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-in">
+    <div>
+      <h2>Visão executiva da rede</h2>
+      <p>Indicadores consolidados a partir do pipeline dbt no BigQuery, cruzando matrículas, frequência e avaliações. Os dados são anonimizados e aleatorizados, então servem para leitura de padrões e método, não para conclusões nominais sobre escolas.</p>
+    </div>
+    <div class="ano">Ano letivo 2025<br>(anonimizado)</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section>
+    <div class="sec-title"><span class="bar"></span><h3>Indicadores-chave</h3></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="bar"></span><h3>Frequência e absenteísmo</h3></div>
+    <div class="grid2">
+      <div class="panel d1">
+        <h4>As duas frequências da base</h4>
+        <div class="cap">Frequência média (%) por fonte do dado</div>
+        <div class="chart-box"><canvas id="cFreq"></canvas></div>
+      </div>
+      <div class="panel d2">
+        <h4>Escolas por faixa de absenteísmo</h4>
+        <div class="cap">Nº de escolas (20+ alunos) por taxa de alunos com frequência &lt; 75%</div>
+        <div class="chart-box"><canvas id="cFaixa"></canvas></div>
+      </div>
+    </div>
+    <div class="insight">
+      <p><b>Insight central:</b> a tabela de frequência por período está travada em 99,9% (sem variância, não indica nada), enquanto a frequência da avaliação varia e revela 10,4% dos alunos com absenteísmo crônico. Escolher a fonte certa é o que torna o indicador acionável.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="bar"></span><h3>Desempenho acadêmico</h3></div>
+    <div class="grid2">
+      <div class="panel d1">
+        <h4>Desempenho x tamanho da turma</h4>
+        <div class="cap">Média geral (0–10) e taxa de aprovação (%) por faixa de tamanho</div>
+        <div class="chart-box tall"><canvas id="cTurma"></canvas></div>
+      </div>
+      <div class="panel d2">
+        <h4>Média por disciplina</h4>
+        <div class="cap">Média geral da rede (0–10). Inglês não possui notas na base</div>
+        <div class="chart-box tall"><canvas id="cDisc"></canvas></div>
+      </div>
+    </div>
+    <div class="insight">
+      <p><b>Leia com cautela:</b> turmas maiores aparecem com média mais alta (correlação de 0,44), o que é contraintuitivo. Provável artefato da aleatorização: turmas minúsculas têm poucas notas e mais ruído. É uma correlação, não uma relação causal.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title"><span class="bar"></span><h3>Escolas prioritárias</h3></div>
+    <div class="panel d1">
+      <h4 style="text-align:left;margin-bottom:8px">Top 10 escolas por taxa de absenteísmo crônico (20+ alunos)</h4>
+      <table id="tTop"></table>
+    </div>
+  </section>
+
+  <footer>
+    Fonte: Desafio Técnico RMI — Prefeitura do Rio de Janeiro. Dados anonimizados e aleatorizados,
+    processados via dbt no BigQuery (dataset <b>rmi_dev_marts</b>).<br>
+    Identificadores de escola e bairro exibidos como hash. Elaboração: Matheus Bianco.
+  </footer>
+
+</div>
+
+<script>
+const DADOS = {
+  kpis: {alunos:96197, escolas:478, turmas:3993, absenteismo:10.4, media_geral:4.74, aprovacao:34.2, freq_aval:87.3, freq_tab:99.9},
+  freq: [{fonte:'Tabela frequência\n(por período)', valor:99.9, sinal:false},
+         {fonte:'Frequência da avaliação\n(por bimestre)', valor:87.3, sinal:true}],
+  faixa: [{f:'< 5%',n:31,c:'#2e7d32'},{f:'5% a 10%',n:157,c:'#66bb6a'},{f:'10% a 15%',n:251,c:'#f9a825'},
+          {f:'15% a 20%',n:32,c:'#e65100'},{f:'20% ou mais',n:7,c:'#c62828'}],
+  turma: [{f:'Até 5',media:4.11,aprov:24.3},{f:'6 a 10',media:3.61,aprov:19.4},{f:'11 a 20',media:3.96,aprov:24.7},
+          {f:'21 a 30',media:5.55,aprov:43.8},{f:'Mais de 30',media:6.14,aprov:55.9}],
+  disc: [{d:'Português',m:4.89},{d:'Ciências',m:4.82},{d:'Matemática',m:4.62}],
+  top: [
+    {e:'ESC-8400858',b:'B-240732',al:31,abs:8,taxa:33.3,freq:81.4},
+    {e:'ESC-8350866',b:'B-594257',al:45,abs:7,taxa:23.3,freq:84.4},
+    {e:'ESC-9652236',b:'B-240732',al:30,abs:5,taxa:22.7,freq:80.8},
+    {e:'ESC-0162922',b:'B-594257',al:32,abs:6,taxa:22.2,freq:84.3},
+    {e:'ESC-4625622',b:'B-672282',al:41,abs:6,taxa:21.4,freq:82.2},
+    {e:'ESC-4025279',b:'B-240732',al:84,abs:13,taxa:20.0,freq:84.6},
+    {e:'ESC-1080084',b:'B-255242',al:34,abs:5,taxa:20.0,freq:79.8},
+    {e:'ESC-4342076',b:'B-594257',al:34,abs:4,taxa:19.1,freq:82.5},
+    {e:'ESC-5650348',b:'B-594257',al:28,abs:4,taxa:19.1,freq:79.6},
+    {e:'ESC-2721378',b:'B-859415',al:83,abs:11,taxa:19.0,freq:86.6},
+  ]
+};
+
+const PRI='#1e3a8a', PRI_L='#2563eb', GRAY='#90a4ae', ACCENT='#0097A7';
+const nf=n=>n.toLocaleString('pt-BR');
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family="'Inter',sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.color='#5a6a7a';
+
+/* KPIs */
+const SVG={
+  users:'<path d="M16 14a4 4 0 10-8 0M12 10a3 3 0 100-6 3 3 0 000 6M3 20a6 6 0 0118 0"/>',
+  school:'<path d="M3 10l9-5 9 5-9 5-9-5zM7 12v4c0 1 2 2 5 2s5-1 5-2v-4M21 10v5"/>',
+  alert:'<path d="M12 3l9 16H3L12 3zM12 10v4M12 17h.01"/>',
+  star:'<path d="M12 3l2.6 6 6.4.5-4.9 4.1 1.6 6.4L12 16.9 6.3 20l1.6-6.4L3 9.5 9.4 9 12 3z"/>'
+};
+function icon(name){return `<svg viewBox="0 0 24 24" fill="none" stroke="${PRI}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SVG[name]}</svg>`}
+const K=DADOS.kpis;
+const kpiCards=[
+  {label:'Alunos avaliados',val:nf(K.alunos),sub:'em 478 escolas (20+ alunos)',ic:'users',kpi:PRI,bg:'#eef4ff'},
+  {label:'Escolas analisadas',val:nf(K.escolas),sub:nf(K.turmas)+' turmas com avaliação',ic:'school',kpi:ACCENT,bg:'#e6f7f9'},
+  {label:'Absenteísmo crônico',val:K.absenteismo.toLocaleString('pt-BR')+'%',sub:'alunos com frequência < 75%',ic:'alert',kpi:'#c62828',bg:'#fdeded'},
+  {label:'Média geral da rede',val:K.media_geral.toLocaleString('pt-BR'),sub:'escala 0 a 10 · aprovação '+K.aprovacao.toLocaleString('pt-BR')+'%',ic:'star',kpi:'#e65100',bg:'#fff2e8'},
+];
+document.getElementById('kpis').innerHTML=kpiCards.map((k,i)=>`
+  <div class="kpi d${i+1}" style="--kpi:${k.kpi};--kpi-bg:${k.bg}">
+    <div class="kpi-top"><span class="kpi-label">${k.label}</span><span class="kpi-ic">${icon(k.ic)}</span></div>
+    <div class="kpi-val">${k.val}</div>
+    <div class="kpi-sub">${k.sub}</div>
+  </div>`).join('');
+
+const dl=(suffix='',color='#1a2332')=>({anchor:'end',align:'end',offset:2,color,font:{weight:'700',size:11},
+  formatter:v=>v.toLocaleString('pt-BR')+suffix});
+
+/* 1. Frequências */
+new Chart(cFreq,{type:'bar',
+  data:{labels:DADOS.freq.map(x=>x.fonte.split('\n')),
+    datasets:[{data:DADOS.freq.map(x=>x.valor),
+      backgroundColor:DADOS.freq.map(x=>x.sinal?PRI:GRAY),borderRadius:6,maxBarThickness:90}]},
+  options:{plugins:{legend:{display:false},datalabels:dl('%')},
+    scales:{y:{beginAtZero:true,max:115,ticks:{callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.05)'}},
+            x:{grid:{display:false}}}}});
+
+/* 2. Faixa absenteísmo */
+new Chart(cFaixa,{type:'bar',
+  data:{labels:DADOS.faixa.map(x=>x.f),
+    datasets:[{data:DADOS.faixa.map(x=>x.n),backgroundColor:DADOS.faixa.map(x=>x.c),borderRadius:6,maxBarThickness:70}]},
+  options:{plugins:{legend:{display:false},datalabels:dl('')},
+    scales:{y:{beginAtZero:true,max:290,title:{display:true,text:'escolas'},grid:{color:'rgba(0,0,0,.05)'}},
+            x:{grid:{display:false}}}}});
+
+/* 3. Desempenho x tamanho */
+new Chart(cTurma,{type:'bar',
+  data:{labels:DADOS.turma.map(x=>x.f),
+    datasets:[
+      {type:'bar',label:'Média geral (0–10)',data:DADOS.turma.map(x=>x.media),
+        backgroundColor:PRI,borderRadius:6,maxBarThickness:48,yAxisID:'y',
+        datalabels:{...dl(''),color:'#1a2332'}},
+      {type:'line',label:'Aprovação (%)',data:DADOS.turma.map(x=>x.aprov),
+        borderColor:ACCENT,backgroundColor:ACCENT,tension:.3,borderWidth:2.5,pointRadius:4,yAxisID:'y1',
+        datalabels:{align:'top',color:ACCENT,font:{weight:'700',size:11},formatter:v=>v.toLocaleString('pt-BR')+'%'}}
+    ]},
+  options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:14,font:{size:11}}}},
+    scales:{y:{beginAtZero:true,max:7,position:'left',title:{display:true,text:'média'},grid:{color:'rgba(0,0,0,.05)'}},
+            y1:{beginAtZero:true,max:70,position:'right',title:{display:true,text:'aprovação %'},grid:{display:false}},
+            x:{grid:{display:false},title:{display:true,text:'alunos por turma'}}}}});
+
+/* 4. Disciplina */
+new Chart(cDisc,{type:'bar',
+  data:{labels:DADOS.disc.map(x=>x.d),
+    datasets:[{data:DADOS.disc.map(x=>x.m),
+      backgroundColor:[PRI,PRI_L,'#60a5fa'],borderRadius:6,maxBarThickness:46}]},
+  options:{indexAxis:'y',plugins:{legend:{display:false},datalabels:{anchor:'end',align:'end',offset:4,
+      color:'#1a2332',font:{weight:'700',size:12},formatter:v=>v.toLocaleString('pt-BR')}},
+    scales:{x:{beginAtZero:true,max:6,grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}});
+
+/* Tabela top 10 */
+function pill(t){let c=t>=20?'#c62828':t>=15?'#e65100':'#f9a825';
+  return `<span class="pill" style="background:${c}1a;color:${c}">${t.toLocaleString('pt-BR')}%</span>`}
+document.getElementById('tTop').innerHTML=`
+  <thead><tr><th>Escola (hash)</th><th>Bairro (hash)</th><th>Alunos</th><th>Com absenteísmo</th>
+    <th>Taxa</th><th>Freq. média</th></tr></thead>
+  <tbody>${DADOS.top.map(r=>`<tr><td>${r.e}</td><td>${r.b}</td><td>${r.al}</td>
+    <td>${r.abs}</td><td>${pill(r.taxa)}</td><td>${r.freq.toLocaleString('pt-BR')}%</td></tr>`).join('')}</tbody>`;
+</script>
+</body>
+</html>

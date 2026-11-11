@@ -1,0 +1,102 @@
+version: 2
+
+sources:
+  - name: rmi_educacao
+    description: >
+      Dados educacionais anonimizados do Registro Municipal Integrado (RMI),
+      carregados do bucket publico gs://case_vagas/rmi para o BigQuery via
+      scripts/load_to_bigquery.py. Representam o ano letivo de 2025
+      (datas anonimizadas para o ano 2000).
+    database: "{{ env_var('GCP_PROJECT') }}"
+    schema: rmi_raw
+
+    # Freshness baseada em metadados do warehouse (dbt 1.7+): nao exige
+    # coluna loaded_at_field, pois os Parquet nao possuem timestamp de carga.
+    # Como os dados sao estaticos, os limites servem para detectar cargas
+    # obsoletas (ex: pipeline de ingestao parou de rodar).
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 30, period: day}
+
+    tables:
+      - name: aluno
+        description: >
+          Cadastro de alunos (1 linha por aluno). IDs anonimizados, faixa
+          etaria agrupada e bairro em hash.
+        columns:
+          - name: id_aluno
+            description: "Identificador do aluno (BYTES: hash de 17 bytes)."
+          - name: id_turma
+            description: "Turma do aluno (INT64, hash com salt)."
+          - name: faixa_etaria
+            description: "Faixa etaria agrupada (0-5, 6-10, 11-14, 15-17, 18+)."
+          - name: bairro
+            description: "Hash do bairro de residencia (INT64). Contem nulos."
+
+      - name: escola
+        description: "Cadastro de unidades escolares (1 linha por escola)."
+        columns:
+          - name: id_escola
+            description: "Identificador da escola (INT64, hash com salt)."
+          - name: bairro
+            description: "Hash do bairro da escola (INT64)."
+
+      - name: turma
+        description: >
+          Apesar do nome, e a tabela de MATRICULAS: relaciona aluno <-> turma
+          no ano letivo (1 linha por aluno). Nao contem serie/turno.
+        columns:
+          - name: ano
+            description: "Ano letivo anonimizado deterministicamente para 2000."
+          - name: id_turma
+            description: "Identificador da turma (INT64, hash com salt)."
+          - name: id_aluno
+            description: "Identificador do aluno (BYTES)."
+
+      - name: avaliacao
+        description: >
+          Notas por bimestre em formato WIDE (uma coluna por disciplina).
+          Grao: aluno/turma/bimestre. Notas 0-10 com jitter +/- 0.2.
+        columns:
+          - name: id_aluno
+            description: "Identificador do aluno (BYTES)."
+          - name: id_turma
+            description: "Identificador da turma (INT64)."
+          - name: frequencia
+            description: >
+              Frequencia geral do aluno no bimestre (0 a 100). Preenchida em
+              ~99,2% das linhas (apenas 1.734 nulas de 221.687).
+          - name: bimestre
+            description: "Bimestre (STRING '1'..'4')."
+          - name: disciplina_1
+            description: "Nota de Português (0-10)."
+          - name: disciplina_2
+            description: "Nota de Ciências (0-10)."
+          - name: disciplina_3
+            description: >
+              Nota de Inglês. ATENCAO: 100% nula nos dados entregues
+              (achado de qualidade)."
+          - name: disciplina_4
+            description: "Nota de Matemática (0-10)."
+
+      - name: frequencia
+        description: >
+          Registros de frequencia por aluno/turma/escola/periodo/disciplina.
+          ~2,7M linhas. Grao com ~2,6 mil duplicatas exatas (tratadas no staging).
+        columns:
+          - name: id_escola
+            description: "Identificador da escola (INT64)."
+          - name: id_aluno
+            description: "Identificador do aluno (BYTES)."
+          - name: id_turma
+            description: >
+              Identificador da turma (INT64). ATENCAO: ~12% das linhas
+              referenciam turmas ausentes na matricula (achado de qualidade)."
+          - name: data_inicio
+            description: "Inicio do periodo de apuracao (STRING 'YYYY-MM-DD', ano 2000)."
+          - name: data_fim
+            description: "Fim do periodo de apuracao (STRING 'YYYY-MM-DD', ano 2000)."
+          - name: disciplina
+            description: "Disciplina (STRING 'disciplina_1'..'disciplina_4')."
+          - name: frequencia
+            description: "Percentual de frequencia no periodo (FLOAT64, 0-100)."

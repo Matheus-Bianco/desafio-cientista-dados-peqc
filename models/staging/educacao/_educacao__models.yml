@@ -1,0 +1,171 @@
+version: 2
+
+models:
+  # ==========================================================================
+  - name: stg_educacao__alunos
+    description: >
+      Cadastro de alunos limpo e padronizado. Grao: 1 linha por aluno.
+      Chave (aluno_id) convertida de BYTES para STRING hexadecimal.
+    columns:
+      - name: aluno_id
+        description: "Chave natural do aluno (hex de 34 caracteres)."
+        tests:
+          # Cada aluno aparece uma unica vez: garante o grao da dimensao.
+          - unique
+          - not_null
+      - name: turma_id
+        description: "Turma de matricula do aluno."
+        tests:
+          # Todo aluno precisa de turma; alem disso a turma deve existir na
+          # matricula (integridade referencial da dimensao -> fato matricula).
+          - not_null
+          - relationships:
+              to: ref('stg_educacao__matriculas')
+              field: turma_id
+      - name: faixa_etaria
+        description: "Faixa etaria agrupada."
+        tests:
+          # Valida o dominio fechado de categorias (evita faixas inesperadas
+          # que quebrariam segmentacoes em marts).
+          - accepted_values:
+              values: ['0-5', '6-10', '11-14', '15-17', '18+']
+      - name: bairro_id
+        description: "Hash do bairro de residencia (contem nulos conhecidos ~0,07%)."
+        tests:
+          # Teste generico customizado: tolera nulos ate 1%, mas AVISA se a
+          # qualidade degradar. Hoje ~0,07% de nulos (dentro do aceitavel).
+          - proporcao_nulos_abaixo_de:
+              threshold: 0.01
+              config:
+                severity: warn
+
+  # ==========================================================================
+  - name: stg_educacao__escolas
+    description: "Cadastro de escolas. Grao: 1 linha por escola."
+    columns:
+      - name: escola_id
+        description: "Chave natural da escola."
+        tests:
+          - unique
+          - not_null
+      - name: bairro_id
+        description: "Hash do bairro da escola."
+        tests:
+          - not_null
+
+  # ==========================================================================
+  - name: stg_educacao__matriculas
+    description: >
+      Matriculas (origem: fonte `turma`). Grao: 1 linha por aluno/turma.
+      Nos dados entregues equivale a 1 linha por aluno.
+    columns:
+      - name: aluno_id
+        description: "Aluno matriculado."
+        tests:
+          # Grao confirmado no profiling: 1 matricula por aluno.
+          - unique
+          - not_null
+      - name: turma_id
+        description: "Turma da matricula."
+        tests:
+          - not_null
+      - name: ano_letivo
+        description: "Ano letivo (anonimizado para 2000)."
+        tests:
+          # Documenta e trava a anonimizacao esperada do ano.
+          - accepted_values:
+              values: [2000]
+              quote: false
+
+  # ==========================================================================
+  - name: stg_educacao__frequencia
+    description: >
+      Frequencia por aluno/turma/escola/periodo/disciplina, deduplicada.
+      Grao: 1 linha por (aluno, turma, escola, periodo, disciplina).
+    columns:
+      - name: aluno_id
+        description: "Aluno do registro de frequencia."
+        tests:
+          - not_null
+          # id_aluno concilia 100% com a dimensao (chave confiavel de join).
+          - relationships:
+              to: ref('stg_educacao__alunos')
+              field: aluno_id
+      - name: escola_id
+        description: "Escola onde a frequencia foi apurada."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_educacao__escolas')
+              field: escola_id
+      - name: turma_id
+        description: "Turma do registro (NAO usada como chave de join: ~12% orfas)."
+        tests:
+          # Severidade WARN de proposito: ~12% das turmas de frequencia nao
+          # existem na matricula. E um achado de qualidade conhecido, nao um
+          # erro que deva quebrar o pipeline. Por isso NAO juntamos fatos por
+          # turma_id, e sim por aluno_id.
+          - relationships:
+              to: ref('stg_educacao__matriculas')
+              field: turma_id
+              config:
+                severity: warn
+      - name: disciplina
+        description: "Disciplina (nome legivel)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Português', 'Ciências', 'Inglês', 'Matemática']
+      - name: percentual_frequencia
+        description: "Percentual de frequencia no periodo (0-100)."
+        tests:
+          - not_null
+          # Garante o intervalo valido de um percentual.
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+          # inclusive por padrao
+
+  # ==========================================================================
+  - name: stg_educacao__avaliacoes
+    description: >
+      Notas normalizadas para formato LONG (1 linha por aluno/turma/bimestre/
+      disciplina). `nota` pode ser nula (aluno sem nota naquela disciplina).
+    columns:
+      - name: aluno_id
+        description: "Aluno avaliado."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_educacao__alunos')
+              field: aluno_id
+      - name: bimestre
+        description: "Bimestre (1 a 4)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+              quote: false
+      - name: disciplina
+        description: "Disciplina (nome legivel)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Português', 'Ciências', 'Inglês', 'Matemática']
+      - name: nota
+        description: "Nota da disciplina no bimestre (0 a 10; pode ser nula)."
+        tests:
+          # Range validado apenas quando ha nota (where nota is not null),
+          # pois a ausencia de nota e legitima nestes dados.
+          - dbt_utils.accepted_range:
+              min_value: "{{ var('nota_minima') }}"
+              max_value: "{{ var('nota_maxima') }}"
+              where: "nota is not null"
+    # Teste de grao composto (combinacao unica) usando dbt_utils.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - aluno_id
+            - turma_id
+            - bimestre
+            - disciplina
