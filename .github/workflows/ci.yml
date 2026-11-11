@@ -12,14 +12,11 @@ on:
 jobs:
   dbt-build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: desafio-rmi-ds
 
     env:
-      DBT_PROFILES_DIR: ${{ github.workspace }}/desafio-rmi-ds/ci
+      DBT_PROFILES_DIR: ${{ github.workspace }}/ci
       GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/desafio-rmi-ds/keyfile.json
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/keyfile.json
 
     steps:
       - name: Checkout
